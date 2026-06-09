@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0a0f">
+<link rel="manifest" href="manifest.json">
+<title>Mundial 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100vh;background:#0a0a0f;color:#f0f0f4;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;padding:20px}
+.page{width:100%;max-width:460px;text-align:center}
+.badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:500;background:rgba(232,184,75,.12);color:#e8b84b;letter-spacing:.06em;margin-bottom:22px}
+h1{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:.06em;color:#e8b84b;line-height:1;margin-bottom:6px}
+.sub{font-size:14px;color:#9090a0;margin-bottom:36px;line-height:1.5}
+.cards{display:flex;flex-direction:column;gap:12px;margin-bottom:30px}
+.card{background:#111118;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px 22px;text-align:left;text-decoration:none;color:inherit;display:block;transition:border-color .2s,background .2s;position:relative}
+.card:hover{border-color:rgba(255,255,255,0.18);background:#18181f}
+.card.primary{border-color:rgba(232,184,75,.25)}
+.card.primary:hover{border-color:rgba(232,184,75,.45)}
+.ctag{display:inline-block;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:500;margin-bottom:10px}
+.tag-off{background:rgba(74,143,255,.15);color:#7ab3ff}
+.tag-live{background:rgba(63,207,142,.15);color:#3fcf8e}
+.ctitle{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;color:#f0f0f4;margin-bottom:6px}
+.cdesc{font-size:13px;color:#9090a0;line-height:1.6;margin-bottom:12px}
+.cfeats{list-style:none;display:flex;flex-wrap:wrap;gap:6px}
+.cfeats li{font-size:11px;color:#55556a;background:#20202a;padding:2px 8px;border-radius:6px}
+.arrow{position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:18px;color:#55556a;transition:right .15s,color .15s}
+.card:hover .arrow{right:15px;color:#9090a0}
+.note{font-size:12px;color:#55556a;line-height:1.7}
+.note strong{color:#9090a0}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+.dot-off{background:#9090a0}.dot-live{background:#3fcf8e;box-shadow:0 0 5px #3fcf8e}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="badge">⚽ USA · México · Canadá 2026</div>
+  <h1>Mundial<br>2026</h1>
+  <p class="sub">Predictor estadístico · Modelo Poisson bivariante<br>Simulación Monte Carlo · 48 equipos · 104 partidos</p>
+  <div class="cards">
+    <a class="card primary" href="mundial2026.html">
+      <div class="ctag tag-off">100% Offline</div>
+      <div class="ctitle">Versión sin conexión</div>
+      <div class="cdesc">Funciona siempre. Ingresás los resultados manualmente y el modelo recalibra automáticamente la fuerza de cada equipo.</div>
+      <ul class="cfeats">
+        <li>✓ Sin API key</li>
+        <li>✓ Carga manual de resultados</li>
+        <li>✓ Posiciones automáticas</li>
+        <li>✓ Predictor + Simulador</li>
+        <li>✓ Guarda en localStorage</li>
+      </ul>
+      <span class="arrow">→</span>
+    </a>
+    <a class="card" href="mundial2026_api.html">
+      <div class="ctag tag-live">Resultados en vivo</div>
+      <div class="ctitle">Versión con API</div>
+      <div class="cdesc">Se conecta a football-data.org y trae resultados automáticamente cada 4 minutos. Requiere API key gratuita.</div>
+      <ul class="cfeats">
+        <li>⚡ Auto-sync cada 4 min</li>
+        <li>⚡ Posiciones en vivo</li>
+        <li>⚡ Partidos en tiempo real</li>
+        <li>○ Requiere API key gratis</li>
+        <li>○ Activa desde el 11 jun</li>
+      </ul>
+      <span class="arrow">→</span>
+    </a>
+  </div>
+  <p class="note">
+    <span class="dot dot-off"></span><strong>Antes del 11 jun:</strong> usá la versión offline para predecir y simular.<br>
+    <span class="dot dot-live"></span><strong>Desde el 11 jun:</strong> ambas versiones con datos reales del torneo.
+  </p>
+</div>
+<script>
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;});
+</script>
+</body>
+</html>
