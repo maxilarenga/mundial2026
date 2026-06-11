@@ -457,16 +457,16 @@ Object.keys(T).forEach(k=>{T[k]._ab=T[k].att;T[k]._db=T[k].def;T[k].gp=0;T[k].gf
 const TOP9=[{id:"ESP",opta:16.1,gs:26},{id:"FRA",opta:12.5,gs:19},{id:"ENG",opta:10.7,gs:9},{id:"ARG",opta:10.8,gs:14},{id:"POR",opta:6.9,gs:6},{id:"BRA",opta:6.8,gs:8},{id:"GER",opta:5.8,gs:5},{id:"NED",opta:4.2,gs:3.5},{id:"BEL",opta:3.5,gs:3}];
 
 // ── API ───────────────────────────────────────────────────────────
-const API_PROXY='https://mundial2026-proxy.maxilarenga.workers.dev' ; // ← Reemplazá con tu URL real del Worker
 const COMP='WC';
 let API_KEY=localStorage.getItem('wc2026_key')||'';
 
 async function apiFetch(path){
   if(!API_KEY)throw new Error('no_key');
+  const target='https://api.football-data.org/v4'+path;
   try{
-    const r=await fetch(API_PROXY+path,{
+    const r=await fetch('https://corsproxy.io/?'+encodeURIComponent(target),{
       headers:{'X-Auth-Token':API_KEY},
-      signal:AbortSignal.timeout(10000)
+      signal:AbortSignal.timeout(12000)
     });
     if(r.status===401||r.status===403)throw new Error('invalid_key');
     if(!r.ok)throw new Error('http_'+r.status);
@@ -760,6 +760,9 @@ renderGroups();fillSelects();renderConsensus();
 if(API_KEY){syncNow();setInterval(()=>{if(document.visibilityState==='visible')syncNow();},4*60*1000);}
 else showModal();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+// Force limpiar cache viejo del SW
+if('caches' in window){caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));}
 </script>
 </body>
 </html>
