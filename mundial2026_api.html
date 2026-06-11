@@ -457,27 +457,41 @@ Object.keys(T).forEach(k=>{T[k]._ab=T[k].att;T[k]._db=T[k].def;T[k].gp=0;T[k].gf
 const TOP9=[{id:"ESP",opta:16.1,gs:26},{id:"FRA",opta:12.5,gs:19},{id:"ENG",opta:10.7,gs:9},{id:"ARG",opta:10.8,gs:14},{id:"POR",opta:6.9,gs:6},{id:"BRA",opta:6.8,gs:8},{id:"GER",opta:5.8,gs:5},{id:"NED",opta:4.2,gs:3.5},{id:"BEL",opta:3.5,gs:3}];
 
 // ── API ───────────────────────────────────────────────────────────
+// Una vez que deployaste el Cloudflare Worker, reemplazá null por tu URL:
+// Ej: 'https://mundial2026-proxy.TU-USUARIO.workers.dev/api'
+const API_PROXY = 'https://mundial2026-proxy.maxilarenga.workers.dev/api';
+
 const API_BASE='https://api.football-data.org/v4';
 const COMP='WC';
 let API_KEY=localStorage.getItem('wc2026_key')||'';
-const PROXIES=[
-  url=>url,
-  url=>`https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-];
+
 async function apiFetch(path){
   if(!API_KEY)throw new Error('no_key');
-  const target=API_BASE+path;
-  let lastErr=null;
-  for(const proxy of PROXIES){
-    try{
-      const r=await fetch(proxy(target),{headers:{'X-Auth-Token':API_KEY},signal:AbortSignal.timeout(8000)});
-      if(r.status===401||r.status===403)throw new Error('invalid_key');
-      if(!r.ok)throw new Error('http_'+r.status);
-      return r.json();
-    }catch(e){if(e.message==='invalid_key')throw e;lastErr=e;}
+
+  // Si hay proxy configurado, úsalo directo (sin CORS)
+  if(API_PROXY){
+    const r=await fetch(API_PROXY+path,{
+      headers:{'X-Auth-Token':API_KEY},
+      signal:AbortSignal.timeout(10000)
+    });
+    if(r.status===401||r.status===403)throw new Error('invalid_key');
+    if(!r.ok)throw new Error('http_'+r.status);
+    return r.json();
   }
-  throw lastErr||new Error('network_error');
+
+  // Sin proxy: intento directo (funciona si el browser no bloquea CORS)
+  try{
+    const r=await fetch(API_BASE+path,{
+      headers:{'X-Auth-Token':API_KEY},
+      signal:AbortSignal.timeout(10000)
+    });
+    if(r.status===401||r.status===403)throw new Error('invalid_key');
+    if(!r.ok)throw new Error('http_'+r.status);
+    return r.json();
+  }catch(e){
+    if(e.message==='invalid_key')throw e;
+    throw new Error('cors_error');
+  }
 }
 
 async function syncNow(){
@@ -495,6 +509,10 @@ async function syncNow(){
     showToast('✓ Sincronizado','ok');
   }catch(e){
     if(e.message==='invalid_key'){showToast('API key inválida','err');localStorage.removeItem('wc2026_key');API_KEY='';}
+    else if(e.message==='cors_error'){
+      showToast('Error CORS — configurá el Cloudflare Worker proxy','err');
+      document.getElementById('sync-time').textContent='⚠ Configurá el proxy';
+    }
     else showToast('Sin conexión. Reintentá más tarde.','err');
   }
   btn.classList.remove('spinning');
