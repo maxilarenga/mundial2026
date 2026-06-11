@@ -475,9 +475,6 @@ async function apiFetch(path){
     if(e.message==='invalid_key')throw e;
     throw new Error('network_error');
   }
-}catch(e){if(e.message==='invalid_key')throw e;lastErr=e;}
-  }
-  throw lastErr||new Error('network_error');
 }
 
 async function syncNow(){
