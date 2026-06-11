@@ -1,4 +1,4 @@
-const CACHE = 'mundial2026-v3';
+const CACHE = 'mundial2026-v4';
 const ASSETS = ['./index.html','./mundial2026.html','./mundial2026_api.html','./manifest.json','./icon.svg'];
 
 self.addEventListener('install', e => {
