@@ -457,24 +457,27 @@ Object.keys(T).forEach(k=>{T[k]._ab=T[k].att;T[k]._db=T[k].def;T[k].gp=0;T[k].gf
 const TOP9=[{id:"ESP",opta:16.1,gs:26},{id:"FRA",opta:12.5,gs:19},{id:"ENG",opta:10.7,gs:9},{id:"ARG",opta:10.8,gs:14},{id:"POR",opta:6.9,gs:6},{id:"BRA",opta:6.8,gs:8},{id:"GER",opta:5.8,gs:5},{id:"NED",opta:4.2,gs:3.5},{id:"BEL",opta:3.5,gs:3}];
 
 // ── API ───────────────────────────────────────────────────────────
+const API_BASE='https://api.football-data.org/v4';
 const COMP='WC';
 let API_KEY=localStorage.getItem('wc2026_key')||'';
-
+const PROXIES=[
+  url=>url,
+  url=>`https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+];
 async function apiFetch(path){
   if(!API_KEY)throw new Error('no_key');
-  const target='https://api.football-data.org/v4'+path;
-  try{
-    const r=await fetch('https://corsproxy.io/?'+encodeURIComponent(target),{
-      headers:{'X-Auth-Token':API_KEY},
-      signal:AbortSignal.timeout(12000)
-    });
-    if(r.status===401||r.status===403)throw new Error('invalid_key');
-    if(!r.ok)throw new Error('http_'+r.status);
-    return r.json();
-  }catch(e){
-    if(e.message==='invalid_key')throw e;
-    throw new Error('network_error');
+  const target=API_BASE+path;
+  let lastErr=null;
+  for(const proxy of PROXIES){
+    try{
+      const r=await fetch(proxy(target),{headers:{'X-Auth-Token':API_KEY},signal:AbortSignal.timeout(8000)});
+      if(r.status===401||r.status===403)throw new Error('invalid_key');
+      if(!r.ok)throw new Error('http_'+r.status);
+      return r.json();
+    }catch(e){if(e.message==='invalid_key')throw e;lastErr=e;}
   }
+  throw lastErr||new Error('network_error');
 }
 
 async function syncNow(){
@@ -511,7 +514,7 @@ function processMatches(matches){
   const avg=1.35;
   Object.keys(T).forEach(k=>{
     const s=stats[k];if(s.gp>=1){
-      const w=Math.min(s.gp/6,1)*0.5;
+      const w=Math.min(s.gp/4,1)*0.65;
       T[k].att=Math.max(0.3,Math.min(2.5,T[k]._ab*(1-w)+(s.gf/s.gp/avg)*w));
       T[k].def=Math.max(0.3,Math.min(2.5,T[k]._db*(1-w)+(s.ga/s.gp/avg)*w));
       T[k].gp=s.gp;
@@ -593,6 +596,7 @@ function saveKey(){
 function skipModal(){document.getElementById('modal').classList.add('hidden');}
 
 function poisson(l,k){let p=Math.exp(-l);for(let i=1;i<=k;i++)p*=l/i;return p}
+function dcRho(i,j,lA,lB){const rho=-0.13;if(i===0&&j===0)return 1-lA*lB*rho;if(i===0&&j===1)return 1+lA*rho;if(i===1&&j===0)return 1+lB*rho;if(i===1&&j===1)return 1-rho;return 1.0;}
 function calcMatch(a,b,stage,venue){
   const tA=T[a],tB=T[b];
   const mu=stage==='final'?1.10:stage==='sf'?1.15:stage==='qf'?1.20:stage==='r16'?1.24:stage==='r32'?1.27:1.34;
@@ -603,7 +607,7 @@ function calcMatch(a,b,stage,venue){
   let lB=Math.min(Math.max(tB.att*tA.def*mu*hB*ff(tB.form)*rf(tA.rank),0.28),4.5);
   let pA=0,pD=0,pB=0;const sc=[];
   for(let i=0;i<=6;i++)for(let j=0;j<=6;j++){
-    const p=poisson(lA,i)*poisson(lB,j);
+    const p=poisson(lA,i)*poisson(lB,j)*dcRho(i,j,lA,lB);
     if(i>j)pA+=p;else if(i<j)pB+=p;else pD+=p;
     sc.push({a:i,b:j,p});
   }
@@ -757,9 +761,6 @@ renderGroups();fillSelects();renderConsensus();
 if(API_KEY){syncNow();setInterval(()=>{if(document.visibilityState==='visible')syncNow();},4*60*1000);}
 else showModal();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
-
-// Force limpiar cache viejo del SW
-if('caches' in window){caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));}
 </script>
 </body>
 </html>
