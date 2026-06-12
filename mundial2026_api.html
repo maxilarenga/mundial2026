@@ -233,17 +233,18 @@ select:hover{border-color:var(--border2)}
 
 /* LIVE MATCHES (API version) */
 .matches-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:8px}
-.match-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px}
+@media(max-width:380px){.mc-flag{font-size:16px}.mc-tn{font-size:11px}.mc-score{font-size:18px}.mc-teams{gap:4px}}
+.match-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;overflow:hidden}
 .match-card.live-card{border-color:rgba(63,207,142,.3);background:rgba(63,207,142,.03)}
 .mc-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .mc-stage{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
 .mc-st{font-size:10px;font-weight:500}
 .mc-st.live{color:var(--green)}.mc-st.fin{color:var(--text3)}.mc-st.sched{color:var(--blue2)}
 .mc-teams{display:grid;grid-template-columns:1fr 56px 1fr;align-items:center;gap:6px}
-.mc-team{display:flex;align-items:center;gap:6px}
+.mc-team{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden}
 .mc-team.away{flex-direction:row-reverse;text-align:right}
-.mc-flag{font-size:20px;flex-shrink:0}
-.mc-tn{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-flag{font-size:18px;flex-shrink:0}
+.mc-tn{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:block}
 .mc-score{text-align:center;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;color:var(--text);line-height:1}
 .mc-score.live-s{color:var(--green)}
 .mc-min{font-size:10px;color:var(--text3);text-align:center;margin-top:2px}
