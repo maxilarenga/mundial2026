@@ -376,7 +376,7 @@ select:hover{border-color:var(--border2)}
 </section>
 
 <section id="p-predictor" class="panel">
-  <div class="sh"><div class="sh-t">Predictor de partido</div><div class="sh-s">Poisson bivariante</div></div>
+  <div class="sh"><div class="sh-t">Predictor de partido</div><div class="sh-s">Dixon-Coles + Elo</div></div>
   <div class="pform">
     <div class="pmatch">
       <div><label class="flabel">Equipo A</label><select id="tA"></select></div>
@@ -440,8 +440,8 @@ select:hover{border-color:var(--border2)}
     <div class="ac"><div class="ac-v">63–68%</div><div class="ac-l">Rango modelos ML estándar</div></div>
     <div class="ac"><div class="ac-v">~0%</div><div class="ac-l">Modelos que acertaron al ganador</div></div>
   </div>
-  <div class="icard"><div class="ic-t">∑ Poisson bivariante</div><div class="ic-b">Los goles de cada equipo siguen Poisson(λ) independiente:</div><div class="code">P(X=k) = (λᵏ · e⁻λ) / k!<br>λ_A = att_A × def_B × μ_fase × bonus_local × f(forma_A) × g(rank_B)<br>P(A gana) = Σ P(i,j) para i > j,  i,j ∈ {0..6}</div></div>
-  <div class="icard"><div class="ic-t">📊 Variables</div><div class="ic-b"><strong>Ranking FIFA (jun 2026):</strong> ARG #1 · ESP #2 · FRA #2 · ENG #4 · BRA #5<br><strong>att/def:</strong> ratio goles marcados/recibidos histórico vs media torneo<br><strong>Recalibración:</strong> con resultados reales, blend ponderado (hasta 50% en 6+ partidos)<br><strong>Bonus localía:</strong> +12% para USA, México y Canadá<br><strong>μ por fase:</strong> 1.34 grupos → 1.10 final</div></div>
+  <div class="icard"><div class="ic-t">∑ Dixon-Coles + Elo</div><div class="ic-b">Los goles de cada equipo siguen Poisson(λ) independiente:</div><div class="code">P(X=k) = (λᵏ · e⁻λ) / k!<br>λ_A = att_A × def_B × μ_fase × localía × f(forma) × g(Elo_rival)<br>P(i,j) = Poisson(λA,i) × Poisson(λB,j) × ρ_DC(i,j)<br>ρ ajusta 0-0, 1-0, 0-1, 1-1 (Dixon-Coles 1997)</div></div>
+  <div class="icard"><div class="ic-t">📊 Variables</div><div class="ic-b"><strong>Elo ratings (eloratings.net):</strong> ESP 2157 · ARG 2115 · FRA 2063 · ENG 2024 · BRA 1991<br><strong>att/def:</strong> ratio goles marcados/recibidos histórico vs media torneo<br><strong>Recalibración:</strong> con resultados reales, blend ponderado (hasta 50% en 6+ partidos)<br><strong>Bonus localía:</strong> +12% para USA, México y Canadá<br><strong>μ por fase:</strong> 1.34 grupos → 1.10 final</div></div>
   <div class="icard"><div class="ic-t">🔁 Monte Carlo</div><div class="ic-b">Simula grupos (72 partidos) → 32 clasificados → knockout. Penales: 50/50 ponderado por fuerza relativa. ±0.3% con 25k iteraciones.</div></div>
   <div class="icard"><div class="ic-t">⚠️ Limitaciones</div><div class="ic-b">Ningún modelo predijo a Argentina en Qatar 2022. Goldman Sachs favoreció a Brasil en 2014, 2018 y 2022. Los porcentajes son distribuciones de escenarios posibles, no certezas.</div></div>
 </section>
@@ -452,30 +452,38 @@ select:hover{border-color:var(--border2)}
 <script>
 
 const GROUPS={A:{t:["MEX","RSA","KOR","CZE"]},B:{t:["CAN","BIH","QAT","SUI"]},C:{t:["BRA","MAR","HAI","SCO"]},D:{t:["USA","PAR","AUS","TUR"]},E:{t:["GER","CUW","CIV","ECU"]},F:{t:["NED","JPN","SWE","TUN"]},G:{t:["BEL","EGY","IRN","NZL"]},H:{t:["ESP","CPV","KSA","URU"]},I:{t:["FRA","SEN","IRQ","NOR"]},J:{t:["ARG","ALG","AUT","JOR"]},K:{t:["POR","DRC","UZB","COL"]},L:{t:["ENG","CRO","GHA","PAN"]}};
-const T={MEX:{n:"México",f:"🇲🇽",att:1.10,def:0.95,rank:15,form:7.0,g:"A",opta:1.0,gs:0.8},RSA:{n:"Sudáfrica",f:"🇿🇦",att:0.82,def:1.10,rank:58,form:5.8,g:"A",opta:0.1,gs:0.1},KOR:{n:"Corea del Sur",f:"🇰🇷",att:0.98,def:0.98,rank:22,form:6.8,g:"A",opta:0.5,gs:0.4},CZE:{n:"Rep. Checa",f:"🇨🇿",att:0.93,def:1.02,rank:36,form:6.5,g:"A",opta:0.3,gs:0.2},CAN:{n:"Canadá",f:"🇨🇦",att:1.05,def:0.97,rank:41,form:6.8,g:"B",opta:0.5,gs:0.3},BIH:{n:"Bosnia-Herz.",f:"🇧🇦",att:0.90,def:1.06,rank:62,form:6.2,g:"B",opta:0.2,gs:0.1},QAT:{n:"Qatar",f:"🇶🇦",att:0.78,def:1.14,rank:72,form:5.5,g:"B",opta:0.1,gs:0.1},SUI:{n:"Suiza",f:"🇨🇭",att:1.00,def:0.94,rank:19,form:7.2,g:"B",opta:1.2,gs:0.9},BRA:{n:"Brasil",f:"🇧🇷",att:1.36,def:0.73,rank:5,form:7.8,g:"C",opta:6.8,gs:8.0},MAR:{n:"Marruecos",f:"🇲🇦",att:0.98,def:0.84,rank:14,form:7.5,g:"C",opta:2.5,gs:1.5},HAI:{n:"Haití",f:"🇭🇹",att:0.72,def:1.20,rank:98,form:5.0,g:"C",opta:0.05,gs:0.05},SCO:{n:"Escocia",f:"🏴󠁧󠁢󠁳󠁣󠁴󠁿",att:0.88,def:1.04,rank:39,form:6.3,g:"C",opta:0.2,gs:0.1},USA:{n:"Estados Unidos",f:"🇺🇸",att:1.08,def:0.95,rank:13,form:7.0,g:"D",opta:1.2,gs:1.0},PAR:{n:"Paraguay",f:"🇵🇾",att:0.90,def:1.04,rank:55,form:6.2,g:"D",opta:0.2,gs:0.2},AUS:{n:"Australia",f:"🇦🇺",att:0.88,def:1.05,rank:23,form:6.5,g:"D",opta:0.4,gs:0.3},TUR:{n:"Turquía",f:"🇹🇷",att:1.00,def:0.97,rank:28,form:7.0,g:"D",opta:0.9,gs:0.7},GER:{n:"Alemania",f:"🇩🇪",att:1.27,def:0.81,rank:11,form:7.5,g:"E",opta:5.8,gs:5.0},CUW:{n:"Curazao",f:"🇨🇼",att:0.70,def:1.22,rank:92,form:5.0,g:"E",opta:0.01,gs:0.0},CIV:{n:"Costa de Marfil",f:"🇨🇮",att:0.93,def:1.02,rank:54,form:6.5,g:"E",opta:0.4,gs:0.3},ECU:{n:"Ecuador",f:"🇪🇨",att:0.93,def:1.02,rank:44,form:6.8,g:"E",opta:0.6,gs:0.4},NED:{n:"Países Bajos",f:"🇳🇱",att:1.22,def:0.83,rank:7,form:7.5,g:"F",opta:4.2,gs:3.5},JPN:{n:"Japón",f:"🇯🇵",att:1.04,def:0.91,rank:18,form:7.3,g:"F",opta:1.8,gs:1.2},SWE:{n:"Suecia",f:"🇸🇪",att:0.97,def:0.98,rank:33,form:6.8,g:"F",opta:0.7,gs:0.5},TUN:{n:"Túnez",f:"🇹🇳",att:0.86,def:1.06,rank:47,form:6.2,g:"F",opta:0.2,gs:0.1},BEL:{n:"Bélgica",f:"🇧🇪",att:1.18,def:0.89,rank:8,form:7.2,g:"G",opta:3.5,gs:3.0},EGY:{n:"Egipto",f:"🇪🇬",att:0.89,def:1.02,rank:46,form:6.3,g:"G",opta:0.4,gs:0.3},IRN:{n:"Irán",f:"🇮🇷",att:0.87,def:1.04,rank:22,form:6.5,g:"G",opta:0.3,gs:0.2},NZL:{n:"Nueva Zelanda",f:"🇳🇿",att:0.78,def:1.10,rank:84,form:5.5,g:"G",opta:0.1,gs:0.05},ESP:{n:"España",f:"🇪🇸",att:1.38,def:0.72,rank:2,form:8.5,g:"H",opta:16.1,gs:26.0},CPV:{n:"Cabo Verde",f:"🇨🇻",att:0.79,def:1.12,rank:71,form:5.8,g:"H",opta:0.1,gs:0.1},KSA:{n:"Arabia Saudita",f:"🇸🇦",att:0.89,def:1.07,rank:56,form:6.2,g:"H",opta:0.3,gs:0.2},URU:{n:"Uruguay",f:"🇺🇾",att:1.12,def:0.89,rank:16,form:7.0,g:"H",opta:2.0,gs:1.8},FRA:{n:"Francia",f:"🇫🇷",att:1.40,def:0.74,rank:2,form:8.2,g:"I",opta:12.5,gs:19.0},SEN:{n:"Senegal",f:"🇸🇳",att:1.01,def:0.96,rank:20,form:7.0,g:"I",opta:1.5,gs:1.0},IRQ:{n:"Irak",f:"🇮🇶",att:0.80,def:1.10,rank:63,form:5.8,g:"I",opta:0.1,gs:0.05},NOR:{n:"Noruega",f:"🇳🇴",att:1.10,def:0.91,rank:29,form:7.3,g:"I",opta:2.2,gs:1.5},ARG:{n:"Argentina",f:"🇦🇷",att:1.40,def:0.70,rank:1,form:8.5,g:"J",opta:10.8,gs:14.0},ALG:{n:"Argelia",f:"🇩🇿",att:0.87,def:1.05,rank:28,form:6.5,g:"J",opta:0.4,gs:0.3},AUT:{n:"Austria",f:"🇦🇹",att:1.02,def:0.95,rank:23,form:7.0,g:"J",opta:1.2,gs:0.8},JOR:{n:"Jordania",f:"🇯🇴",att:0.76,def:1.14,rank:63,form:5.5,g:"J",opta:0.05,gs:0.05},POR:{n:"Portugal",f:"🇵🇹",att:1.30,def:0.81,rank:6,form:8.0,g:"K",opta:6.9,gs:6.0},DRC:{n:"RD Congo",f:"🇨🇩",att:0.84,def:1.07,rank:50,form:6.0,g:"K",opta:0.2,gs:0.1},UZB:{n:"Uzbekistán",f:"🇺🇿",att:0.87,def:1.05,rank:60,form:6.2,g:"K",opta:0.1,gs:0.1},COL:{n:"Colombia",f:"🇨🇴",att:1.10,def:0.93,rank:17,form:7.5,g:"K",opta:2.1,gs:1.5},ENG:{n:"Inglaterra",f:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",att:1.28,def:0.81,rank:4,form:7.8,g:"L",opta:10.7,gs:9.0},CRO:{n:"Croacia",f:"🇭🇷",att:1.10,def:0.90,rank:10,form:7.2,g:"L",opta:2.8,gs:2.0},GHA:{n:"Ghana",f:"🇬🇭",att:0.89,def:1.07,rank:52,form:6.2,g:"L",opta:0.3,gs:0.2},PAN:{n:"Panamá",f:"🇵🇦",att:0.80,def:1.10,rank:65,form:5.8,g:"L",opta:0.1,gs:0.1}};
+const T={MEX:{n:"México",f:"🇲🇽",att:1.10,def:0.95,elo:1881,rank:15,form:7.0,g:"A",opta:1.0,gs:0.8},RSA:{n:"Sudáfrica",f:"🇿🇦",att:0.82,def:1.10,elo:1500,rank:58,form:5.8,g:"A",opta:0.1,gs:0.1},KOR:{n:"Corea del Sur",f:"🇰🇷",att:0.98,def:0.98,elo:1758,rank:22,form:6.8,g:"A",opta:0.5,gs:0.4},CZE:{n:"Rep. Checa",f:"🇨🇿",att:0.93,def:1.02,elo:1740,rank:36,form:6.5,g:"A",opta:0.3,gs:0.2},CAN:{n:"Canadá",f:"🇨🇦",att:1.05,def:0.97,elo:1788,rank:41,form:6.8,g:"B",opta:0.5,gs:0.3},BIH:{n:"Bosnia-Herz.",f:"🇧🇦",att:0.90,def:1.06,elo:1580,rank:62,form:6.2,g:"B",opta:0.2,gs:0.1},QAT:{n:"Qatar",f:"🇶🇦",att:0.78,def:1.14,elo:1550,rank:72,form:5.5,g:"B",opta:0.1,gs:0.1},SUI:{n:"Suiza",f:"🇨🇭",att:1.00,def:0.94,elo:1891,rank:19,form:7.2,g:"B",opta:1.2,gs:0.9},BRA:{n:"Brasil",f:"🇧🇷",att:1.36,def:0.73,elo:1991,rank:5,form:7.8,g:"C",opta:6.8,gs:8.0},MAR:{n:"Marruecos",f:"🇲🇦",att:0.98,def:0.84,elo:1827,rank:14,form:7.5,g:"C",opta:2.5,gs:1.5},HAI:{n:"Haití",f:"🇭🇹",att:0.72,def:1.20,elo:1550,rank:98,form:5.0,g:"C",opta:0.05,gs:0.05},SCO:{n:"Escocia",f:"🏴󠁧󠁢󠁳󠁣󠁴󠁿",att:0.88,def:1.04,elo:1782,rank:39,form:6.3,g:"C",opta:0.2,gs:0.1},USA:{n:"Estados Unidos",f:"🇺🇸",att:1.08,def:0.95,elo:1726,rank:13,form:7.0,g:"D",opta:1.2,gs:1.0},PAR:{n:"Paraguay",f:"🇵🇾",att:0.90,def:1.04,elo:1834,rank:55,form:6.2,g:"D",opta:0.2,gs:0.2},AUS:{n:"Australia",f:"🇦🇺",att:0.88,def:1.05,elo:1777,rank:23,form:6.5,g:"D",opta:0.4,gs:0.3},TUR:{n:"Turquía",f:"🇹🇷",att:1.00,def:0.97,elo:1911,rank:28,form:7.0,g:"D",opta:0.9,gs:0.7},GER:{n:"Alemania",f:"🇩🇪",att:1.27,def:0.81,elo:1932,rank:11,form:7.5,g:"E",opta:5.8,gs:5.0},CUW:{n:"Curazao",f:"🇨🇼",att:0.70,def:1.22,elo:1500,rank:92,form:5.0,g:"E",opta:0.01,gs:0.0},CIV:{n:"Costa de Marfil",f:"🇨🇮",att:0.93,def:1.02,elo:1695,rank:54,form:6.5,g:"E",opta:0.4,gs:0.3},ECU:{n:"Ecuador",f:"🇪🇨",att:0.93,def:1.02,elo:1938,rank:44,form:6.8,g:"E",opta:0.6,gs:0.4},NED:{n:"Países Bajos",f:"🇳🇱",att:1.22,def:0.83,elo:1948,rank:7,form:7.5,g:"F",opta:4.2,gs:3.5},JPN:{n:"Japón",f:"🇯🇵",att:1.04,def:0.91,elo:1906,rank:18,form:7.3,g:"F",opta:1.8,gs:1.2},SWE:{n:"Suecia",f:"🇸🇪",att:0.97,def:0.98,elo:1712,rank:33,form:6.8,g:"F",opta:0.7,gs:0.5},TUN:{n:"Túnez",f:"🇹🇳",att:0.86,def:1.06,elo:1628,rank:47,form:6.2,g:"F",opta:0.2,gs:0.1},BEL:{n:"Bélgica",f:"🇧🇪",att:1.18,def:0.89,elo:1894,rank:8,form:7.2,g:"G",opta:3.5,gs:3.0},EGY:{n:"Egipto",f:"🇪🇬",att:0.89,def:1.02,elo:1696,rank:46,form:6.3,g:"G",opta:0.4,gs:0.3},IRN:{n:"Irán",f:"🇮🇷",att:0.87,def:1.04,elo:1772,rank:22,form:6.5,g:"G",opta:0.3,gs:0.2},NZL:{n:"Nueva Zelanda",f:"🇳🇿",att:0.78,def:1.10,elo:1500,rank:84,form:5.5,g:"G",opta:0.1,gs:0.05},ESP:{n:"España",f:"🇪🇸",att:1.38,def:0.72,elo:2157,rank:2,form:8.5,g:"H",opta:16.1,gs:26.0},CPV:{n:"Cabo Verde",f:"🇨🇻",att:0.79,def:1.12,elo:1500,rank:71,form:5.8,g:"H",opta:0.1,gs:0.1},KSA:{n:"Arabia Saudita",f:"🇸🇦",att:0.89,def:1.07,elo:1635,rank:56,form:6.2,g:"H",opta:0.3,gs:0.2},URU:{n:"Uruguay",f:"🇺🇾",att:1.12,def:0.89,elo:1892,rank:16,form:7.0,g:"H",opta:2.0,gs:1.8},FRA:{n:"Francia",f:"🇫🇷",att:1.40,def:0.74,elo:2063,rank:2,form:8.2,g:"I",opta:12.5,gs:19.0},SEN:{n:"Senegal",f:"🇸🇳",att:1.01,def:0.96,elo:1860,rank:20,form:7.0,g:"I",opta:1.5,gs:1.0},IRQ:{n:"Irak",f:"🇮🇶",att:0.80,def:1.10,elo:1600,rank:63,form:5.8,g:"I",opta:0.1,gs:0.05},NOR:{n:"Noruega",f:"🇳🇴",att:1.10,def:0.91,elo:1914,rank:29,form:7.3,g:"I",opta:2.2,gs:1.5},ARG:{n:"Argentina",f:"🇦🇷",att:1.40,def:0.70,elo:2115,rank:1,form:8.5,g:"J",opta:10.8,gs:14.0},ALG:{n:"Argelia",f:"🇩🇿",att:0.87,def:1.05,elo:1772,rank:28,form:6.5,g:"J",opta:0.4,gs:0.3},AUT:{n:"Austria",f:"🇦🇹",att:1.02,def:0.95,elo:1830,rank:23,form:7.0,g:"J",opta:1.2,gs:0.8},JOR:{n:"Jordania",f:"🇯🇴",att:0.76,def:1.14,elo:1680,rank:63,form:5.5,g:"J",opta:0.05,gs:0.05},POR:{n:"Portugal",f:"🇵🇹",att:1.30,def:0.81,elo:1989,rank:6,form:8.0,g:"K",opta:6.9,gs:6.0},DRC:{n:"RD Congo",f:"🇨🇩",att:0.84,def:1.07,elo:1652,rank:50,form:6.0,g:"K",opta:0.2,gs:0.1},UZB:{n:"Uzbekistán",f:"🇺🇿",att:0.87,def:1.05,elo:1714,rank:60,form:6.2,g:"K",opta:0.1,gs:0.1},COL:{n:"Colombia",f:"🇨🇴",att:1.10,def:0.93,elo:1982,rank:17,form:7.5,g:"K",opta:2.1,gs:1.5},ENG:{n:"Inglaterra",f:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",att:1.28,def:0.81,elo:2024,rank:4,form:7.8,g:"L",opta:10.7,gs:9.0},CRO:{n:"Croacia",f:"🇭🇷",att:1.10,def:0.90,elo:1912,rank:10,form:7.2,g:"L",opta:2.8,gs:2.0},GHA:{n:"Ghana",f:"🇬🇭",att:0.89,def:1.07,elo:1620,rank:52,form:6.2,g:"L",opta:0.3,gs:0.2},PAN:{n:"Panamá",f:"🇵🇦",att:0.80,def:1.10,elo:1730,rank:65,form:5.8,g:"L",opta:0.1,gs:0.1}};
 Object.keys(T).forEach(k=>{T[k]._ab=T[k].att;T[k]._db=T[k].def;T[k].gp=0;T[k].gf_=0;T[k].gc_=0;});
 const TOP9=[{id:"ESP",opta:16.1,gs:26},{id:"FRA",opta:12.5,gs:19},{id:"ENG",opta:10.7,gs:9},{id:"ARG",opta:10.8,gs:14},{id:"POR",opta:6.9,gs:6},{id:"BRA",opta:6.8,gs:8},{id:"GER",opta:5.8,gs:5},{id:"NED",opta:4.2,gs:3.5},{id:"BEL",opta:3.5,gs:3}];
 
 // ── API ───────────────────────────────────────────────────────────
-const API_BASE='https://api.football-data.org/v4';
 const COMP='WC';
 let API_KEY=localStorage.getItem('wc2026_key')||'';
-const PROXIES=[
-  url=>url,
-  url=>`https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-];
+
 async function apiFetch(path){
   if(!API_KEY)throw new Error('no_key');
-  const target=API_BASE+path;
+  const target='https://api.football-data.org/v4'+path;
+  const proxies=[
+    u=>'https://corsproxy.io/?'+encodeURIComponent(u),
+    u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+    u=>'https://corsfix.com/?'+encodeURIComponent(u)
+  ];
   let lastErr=null;
-  for(const proxy of PROXIES){
+  for(const proxy of proxies){
     try{
-      const r=await fetch(proxy(target),{headers:{'X-Auth-Token':API_KEY},signal:AbortSignal.timeout(8000)});
+      const r=await fetch(proxy(target),{
+        headers:{'X-Auth-Token':API_KEY},
+        signal:AbortSignal.timeout(10000)
+      });
       if(r.status===401||r.status===403)throw new Error('invalid_key');
-      if(!r.ok)throw new Error('http_'+r.status);
-      return r.json();
-    }catch(e){if(e.message==='invalid_key')throw e;lastErr=e;}
+      if(!r.ok)continue;
+      const data=await r.json();
+      if(data&&(data.matches||data.standings||data.competition))return data;
+      continue;
+    }catch(e){
+      if(e.message==='invalid_key')throw e;
+      lastErr=e;
+    }
   }
   throw lastErr||new Error('network_error');
 }
@@ -602,9 +610,9 @@ function calcMatch(a,b,stage,venue){
   const mu=stage==='final'?1.10:stage==='sf'?1.15:stage==='qf'?1.20:stage==='r16'?1.24:stage==='r32'?1.27:1.34;
   const hA=venue==='homeA'?1.12:venue==='homeB'?0.91:1;
   const hB=venue==='homeB'?1.12:venue==='homeA'?0.91:1;
-  const ff=f=>0.86+f*0.028;const rf=r=>1+(r-40)*0.0017;
-  let lA=Math.min(Math.max(tA.att*tB.def*mu*hA*ff(tA.form)*rf(tB.rank),0.28),4.5);
-  let lB=Math.min(Math.max(tB.att*tA.def*mu*hB*ff(tB.form)*rf(tA.rank),0.28),4.5);
+  const ff=f=>0.86+f*0.028;const rf=elo=>1+(1800-elo)*0.00035;
+  let lA=Math.min(Math.max(tA.att*tB.def*mu*hA*ff(tA.form)*rf(tB.elo),0.28),4.5);
+  let lB=Math.min(Math.max(tB.att*tA.def*mu*hB*ff(tB.form)*rf(tA.elo),0.28),4.5);
   let pA=0,pD=0,pB=0;const sc=[];
   for(let i=0;i<=6;i++)for(let j=0;j<=6;j++){
     const p=poisson(lA,i)*poisson(lB,j)*dcRho(i,j,lA,lB);
@@ -643,18 +651,29 @@ async function doSim(N){
   for(let done=0;done<N;done+=300){
     await new Promise(r=>setTimeout(r,0));
     for(let b=0;b<300&&done+b<N;b++){
-      const q1=[],thirds=[];
-      Object.values(GROUPS).forEach(g=>{const s=simGroup(g.t);q1.push(s[0].id,s[1].id);thirds.push(s[2]);});
-      thirds.sort((a,b)=>b.pts!==a.pts?b.pts-a.pts:b.gd-a.gd);
-      const r32=[...q1,...thirds.slice(0,8).map(x=>x.id)];
-      const r16=[];for(let i=0;i<32;i+=2)r16.push(sampleKO(r32[i],r32[i+1],'r32'));
-      const qfr=[];for(let i=0;i<16;i+=2)qfr.push(sampleKO(r16[i],r16[i+1],'r16'));
-      qfr.forEach(t=>qf[t]++);
-      const sfr=[];for(let i=0;i<8;i+=2)sfr.push(sampleKO(qfr[i],qfr[i+1],'qf'));
-      sfr.forEach(t=>semi[t]++);
-      const fr=[];for(let i=0;i<4;i+=2)fr.push(sampleKO(sfr[i],sfr[i+1],'sf'));
-      fr.forEach(t=>fin[t]++);
-      champ[sampleKO(fr[0],fr[1],'final')]++;
+      const gk=Object.keys(GROUPS);
+      const W=[],R=[],TH=[];
+      gk.forEach(g=>{const s=simGroup(GROUPS[g].t);W.push(s[0].id);R.push(s[1].id);TH.push(s[2]);});
+      TH.sort((a,b)=>b.pts!==a.pts?b.pts-a.pts:b.gd!==a.gd?b.gd-a.gd:b.gf-a.gf);
+      const t8=TH.slice(0,8).map(x=>x.id);
+      for(let i=t8.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[t8[i],t8[j]]=[t8[j],t8[i]];}
+      const r32=[
+        sampleKO(W[0],t8[0],'r32'),sampleKO(R[3],R[4],'r32'),
+        sampleKO(W[1],t8[1],'r32'),sampleKO(W[2],R[5],'r32'),
+        sampleKO(W[3],t8[2],'r32'),sampleKO(R[0],R[1],'r32'),
+        sampleKO(W[4],t8[3],'r32'),sampleKO(W[5],R[2],'r32'),
+        sampleKO(W[6],t8[4],'r32'),sampleKO(R[9],R[10],'r32'),
+        sampleKO(W[7],t8[5],'r32'),sampleKO(W[8],R[11],'r32'),
+        sampleKO(W[9],t8[6],'r32'),sampleKO(R[6],R[7],'r32'),
+        sampleKO(W[10],t8[7],'r32'),sampleKO(W[11],R[8],'r32')
+      ];
+      const r16=[];for(let i=0;i<16;i+=2)r16.push(sampleKO(r32[i],r32[i+1],'r16'));
+      r16.forEach(t=>qf[t]++);
+      const qfr=[];for(let i=0;i<8;i+=2)qfr.push(sampleKO(r16[i],r16[i+1],'qf'));
+      qfr.forEach(t=>semi[t]++);
+      const sfr=[];for(let i=0;i<4;i+=2)sfr.push(sampleKO(qfr[i],qfr[i+1],'sf'));
+      sfr.forEach(t=>fin[t]++);
+      champ[sampleKO(sfr[0],sfr[1],'final')]++;
     }
     document.getElementById('prog').style.width=Math.min(100,Math.round((done+300)/N*100))+'%';
   }
@@ -761,6 +780,9 @@ renderGroups();fillSelects();renderConsensus();
 if(API_KEY){syncNow();setInterval(()=>{if(document.visibilityState==='visible')syncNow();},4*60*1000);}
 else showModal();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+// Force limpiar cache viejo del SW
+if('caches' in window){caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));}
 </script>
 </body>
 </html>
