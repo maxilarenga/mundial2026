@@ -509,7 +509,7 @@ async function syncNow(){
   btn.classList.remove('spinning');
 }
 
-const ALIASES={spain:"ESP",france:"FRA",england:"ENG",argentina:"ARG",portugal:"POR",brazil:"BRA",germany:"GER",netherlands:"NED",belgium:"BEL",croatia:"CRO",uruguay:"URU",morocco:"MAR",senegal:"SEN",japan:"JPN","south korea":"KOR",australia:"AUS","united states":"USA",usa:"USA",mexico:"MEX",canada:"CAN",switzerland:"SUI",norway:"NOR",sweden:"SWE",turkey:"TUR",colombia:"COL",ecuador:"ECU",paraguay:"PAR",austria:"AUT",algeria:"ALG",ghana:"GHA","ivory coast":"CIV",egypt:"EGY",qatar:"QAT",iran:"IRN","saudi arabia":"KSA","south africa":"RSA","new zealand":"NZL","dr congo":"DRC",czechia:"CZE","czech republic":"CZE",haiti:"HAI","cape verde":"CPV",panama:"PAN",iraq:"IRQ",jordan:"JOR",uzbekistan:"UZB",scotland:"SCO","bosnia-herzegovina":"BIH","bosnia and herzegovina":"BIH",curacao:"CUW",tunisia:"TUN"};
+const ALIASES={spain:"ESP",france:"FRA",england:"ENG",argentina:"ARG",portugal:"POR",brazil:"BRA",germany:"GER",netherlands:"NED",belgium:"BEL",croatia:"CRO",uruguay:"URU",morocco:"MAR",senegal:"SEN",japan:"JPN","south korea":"KOR",australia:"AUS","united states":"USA",usa:"USA",mexico:"MEX",canada:"CAN",switzerland:"SUI",norway:"NOR",sweden:"SWE",turkey:"TUR",colombia:"COL",ecuador:"ECU",paraguay:"PAR",austria:"AUT",algeria:"ALG",ghana:"GHA","ivory coast":"CIV",egypt:"EGY",qatar:"QAT",iran:"IRN","saudi arabia":"KSA","south africa":"RSA","new zealand":"NZL","dr congo":"DRC",czechia:"CZE","czech republic":"CZE",haiti:"HAI","cape verde":"CPV",panama:"PAN",iraq:"IRQ",jordan:"JOR",uzbekistan:"UZB",scotland:"SCO","bosnia-herzegovina":"BIH","bosnia and herzegovina":"BIH",curacao:"CUW",tunisia:"TUN","curaçao":"CUW","cape verde islands":"CPV","congo dr":"DRC"};
 function teamCode(n){if(!n)return null;const l=n.toLowerCase().trim();if(ALIASES[l])return ALIASES[l];for(const k of Object.keys(T)){if(T[k].n.toLowerCase()===l||l.includes(T[k].n.toLowerCase()))return k;}return null;}
 
 function processMatches(matches){
@@ -572,7 +572,7 @@ function processStandings(standings){
   const gs={};
   standings.forEach(st=>{
     if(st.type==='TOTAL'){
-      const g=st.group?.match(/GROUP_([A-L])/)?.[1];
+      const g=(st.group?.match(/Group\s+([A-L])/i)?.[1])||(st.group?.match(/GROUP_([A-L])/)?.[1]);
       if(g)gs[g]=(st.table||[]).map(r=>({code:teamCode(r.team?.name||''),name:r.team?.name||'?',gp:r.playedGames,w:r.won,d:r.draw,l:r.lost,gf:r.goalsFor,ga:r.goalsAgainst,gd:r.goalDifference,pts:r.points}));
     }
   });
