@@ -532,8 +532,41 @@ function processMatches(matches){
   document.getElementById('played-count').textContent=fin.length||'0';
   document.getElementById('played-sub').textContent=fin.length>0?fin.length+' de 104 jugados':'Torneo no iniciado aún';
   renderLive(matches);
+  const calcStand=calcStandingsFromMatches(matches);
+  renderStandings(calcStand);
+  const stEl=document.getElementById('st-upd');
+  if(stEl)stEl.textContent='Calculado · '+matches.filter(m=>m.status==='FINISHED').length+' partidos jugados';
 }
 
+function calcStandingsFromMatches(matches){
+  const gs={};
+  Object.keys(GROUPS).forEach(g=>{
+    gs[g]=GROUPS[g].t.map(code=>({code,name:T[code].n,flag:T[code].f,gp:0,w:0,d:0,l:0,gf:0,ga:0,gd:0,pts:0}));
+  });
+  matches.filter(m=>m.status==='FINISHED').forEach(m=>{
+    const hc=teamCode(m.homeTeam?.name||'');
+    const ac=teamCode(m.awayTeam?.name||'');
+    const hg=m.score?.fullTime?.home;
+    const ag=m.score?.fullTime?.away;
+    if(!hc||!ac||hg==null||ag==null)return;
+    const g=T[hc]?.g;
+    if(!g||!gs[g])return;
+    const h=gs[g].find(r=>r.code===hc);
+    const a=gs[g].find(r=>r.code===ac);
+    if(!h||!a)return;
+    h.gp++;a.gp++;
+    h.gf+=hg;h.ga+=ag;
+    a.gf+=ag;a.ga+=hg;
+    if(hg>ag){h.w++;a.l++;h.pts+=3;}
+    else if(hg<ag){a.w++;h.l++;a.pts+=3;}
+    else{h.d++;a.d++;h.pts++;a.pts++;}
+  });
+  Object.keys(gs).forEach(g=>{
+    gs[g].forEach(r=>r.gd=r.gf-r.ga);
+    gs[g].sort((a,b)=>b.pts!==a.pts?b.pts-a.pts:b.gd!==a.gd?b.gd-a.gd:b.gf-a.gf);
+  });
+  return gs;
+}
 function processStandings(standings){
   const gs={};
   standings.forEach(st=>{
