@@ -568,6 +568,7 @@ function calcStandingsFromMatches(matches){
   return gs;
 }
 function processStandings(standings){
+  if(!standings||!standings.length)return;
   const gs={};
   standings.forEach(st=>{
     if(st.type==='TOTAL'){
