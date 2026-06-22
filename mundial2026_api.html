@@ -441,7 +441,7 @@ select:hover{border-color:var(--border2)}
     <div class="ac"><div class="ac-v">63–68%</div><div class="ac-l">Rango modelos ML estándar</div></div>
     <div class="ac"><div class="ac-v">~0%</div><div class="ac-l">Modelos que acertaron al ganador</div></div>
   </div>
-  <div class="icard"><div class="ic-t">∑ Dixon-Coles + Elo</div><div class="ic-b">Los goles de cada equipo siguen Poisson(λ) independiente:</div><div class="code">P(X=k) = (λᵏ · e⁻λ) / k!<br>λ_A = att_A × def_B × μ_fase × localía × f(forma) × g(Elo_rival)<br>P(i,j) = Poisson(λA,i) × Poisson(λB,j) × ρ_DC(i,j)<br>ρ ajusta 0-0, 1-0, 0-1, 1-1 (Dixon-Coles 1997)</div></div>
+  <div class="icard"><div class="ic-t">∑ Dixon-Coles + Elo</div><div class="ic-b">Los goles de cada equipo siguen Poisson(λ) independiente:</div><div class="code">P(X=k) = (λᵏ · e⁻λ) / k!<br>λ_A = att_A × def_B × μ_fase × localía × f(forma) × g(Elo_rival) × ctx<br>P(i,j) = Poisson(λA,i) × Poisson(λB,j) × ρ_DC(i,j)<br>ctx = contexto Mundial (posición, urgencia clasificatoria)</div></div>
   <div class="icard"><div class="ic-t">📊 Variables</div><div class="ic-b"><strong>Elo ratings (eloratings.net):</strong> ESP 2157 · ARG 2115 · FRA 2063 · ENG 2024 · BRA 1991<br><strong>att/def:</strong> ratio goles marcados/recibidos histórico vs media torneo<br><strong>Recalibración:</strong> con resultados reales, blend ponderado (hasta 50% en 6+ partidos)<br><strong>Bonus localía:</strong> +12% para USA, México y Canadá<br><strong>μ por fase:</strong> 1.34 grupos → 1.10 final</div></div>
   <div class="icard"><div class="ic-t">🔁 Monte Carlo</div><div class="ic-b">Simula grupos (72 partidos) → 32 clasificados → knockout. Penales: 50/50 ponderado por fuerza relativa. ±0.3% con 25k iteraciones.</div></div>
   <div class="icard"><div class="ic-t">⚠️ Limitaciones</div><div class="ic-b">Ningún modelo predijo a Argentina en Qatar 2022. Goldman Sachs favoreció a Brasil en 2014, 2018 y 2022. Los porcentajes son distribuciones de escenarios posibles, no certezas.</div></div>
@@ -460,6 +460,7 @@ const TOP9=[{id:"ESP",opta:16.1,gs:26},{id:"FRA",opta:12.5,gs:19},{id:"ENG",opta
 // ── API ───────────────────────────────────────────────────────────
 const COMP='WC';
 let API_KEY=localStorage.getItem('wc2026_key')||'';
+let LAST_MATCHES=null;
 
 async function apiFetch(path){
   if(!API_KEY)throw new Error('no_key');
@@ -512,7 +513,7 @@ async function syncNow(){
 const ALIASES={spain:"ESP",france:"FRA",england:"ENG",argentina:"ARG",portugal:"POR",brazil:"BRA",germany:"GER",netherlands:"NED",belgium:"BEL",croatia:"CRO",uruguay:"URU",morocco:"MAR",senegal:"SEN",japan:"JPN","south korea":"KOR",australia:"AUS","united states":"USA",usa:"USA",mexico:"MEX",canada:"CAN",switzerland:"SUI",norway:"NOR",sweden:"SWE",turkey:"TUR",colombia:"COL",ecuador:"ECU",paraguay:"PAR",austria:"AUT",algeria:"ALG",ghana:"GHA","ivory coast":"CIV",egypt:"EGY",qatar:"QAT",iran:"IRN","saudi arabia":"KSA","south africa":"RSA","new zealand":"NZL","dr congo":"DRC",czechia:"CZE","czech republic":"CZE",haiti:"HAI","cape verde":"CPV",panama:"PAN",iraq:"IRQ",jordan:"JOR",uzbekistan:"UZB",scotland:"SCO","bosnia-herzegovina":"BIH","bosnia and herzegovina":"BIH",curacao:"CUW",tunisia:"TUN","curaçao":"CUW","cape verde islands":"CPV","congo dr":"DRC"};
 function teamCode(n){if(!n)return null;const l=n.toLowerCase().trim();if(ALIASES[l])return ALIASES[l];for(const k of Object.keys(T)){if(T[k].n.toLowerCase()===l||l.includes(T[k].n.toLowerCase()))return k;}return null;}
 
-function processMatches(matches){
+function processMatches(matches){LAST_MATCHES=matches;
   const fin=matches.filter(m=>m.status==='FINISHED');
   const stats={};Object.keys(T).forEach(k=>stats[k]={gf:0,ga:0,gp:0});
   fin.forEach(m=>{
@@ -523,7 +524,7 @@ function processMatches(matches){
   const avg=1.35;
   Object.keys(T).forEach(k=>{
     const s=stats[k];if(s.gp>=1){
-      const w=Math.min(s.gp/4,1)*0.65;
+      const w=Math.min(s.gp/3,1)*0.75;
       T[k].att=Math.max(0.3,Math.min(2.5,T[k]._ab*(1-w)+(s.gf/s.gp/avg)*w));
       T[k].def=Math.max(0.3,Math.min(2.5,T[k]._db*(1-w)+(s.ga/s.gp/avg)*w));
       T[k].gp=s.gp;
@@ -640,14 +641,38 @@ function skipModal(){document.getElementById('modal').classList.add('hidden');}
 
 function poisson(l,k){let p=Math.exp(-l);for(let i=1;i<=k;i++)p*=l/i;return p}
 function dcRho(i,j,lA,lB){const rho=-0.13;if(i===0&&j===0)return 1-lA*lB*rho;if(i===0&&j===1)return 1+lA*rho;if(i===1&&j===0)return 1+lB*rho;if(i===1&&j===1)return 1-rho;return 1.0;}
+function getCtxMult(code,stage){
+  if(stage!=='group'||!LAST_MATCHES)return{att:1,def:1,status:'none',pos:0,pts:0};
+  const st=calcStandingsFromMatches(LAST_MATCHES);
+  const g=T[code]?.g;
+  if(!g||!st[g])return{att:1,def:1,status:'none',pos:0,pts:0};
+  const row=st[g].find(r=>r.code===code);
+  if(!row||row.gp===0)return{att:1,def:1,status:'base',pos:0,pts:0};
+  const pos=st[g].indexOf(row)+1;
+  const rem=3-row.gp;
+  const top2=st[g].slice(0,2);
+  const minTop2Pts=top2[1]?top2[1].pts:0;
+  const maxPossible=row.pts+rem*3;
+  let att=1,def=1,status='neutral';
+  // Estado clasificatorio
+  if(row.pts>=6||(row.pts>=4&&row.gd>=2)){status='clasificado';att*=0.92;}
+  else if(rem===0&&maxPossible<minTop2Pts){status='eliminado';att*=0.85;def*=1.05;}
+  else if(row.gp===2&&row.pts<=1&&maxPossible>=minTop2Pts){status='vida o muerte';att*=1.10;def*=1.08;}
+  else if(rem===0&&row.pts>=minTop2Pts-1){status='define';att*=1.08;def*=1.05;}
+  // Bonus por posición
+  if(pos===1)att*=1.05;
+  else if(pos===2)att*=1.02;
+  else if(pos===4&&status!=='eliminado')att*=0.97;
+  return{att,def,status,pos,pts:row.pts};
+}
 function calcMatch(a,b,stage,venue){
   const tA=T[a],tB=T[b];
   const mu=stage==='final'?1.10:stage==='sf'?1.15:stage==='qf'?1.20:stage==='r16'?1.24:stage==='r32'?1.27:1.34;
   const hA=venue==='homeA'?1.12:venue==='homeB'?0.91:1;
   const hB=venue==='homeB'?1.12:venue==='homeA'?0.91:1;
   const ff=f=>0.86+f*0.028;const rf=elo=>1+(1800-elo)*0.00035;
-  let lA=Math.min(Math.max(tA.att*tB.def*mu*hA*ff(tA.form)*rf(tB.elo),0.28),4.5);
-  let lB=Math.min(Math.max(tB.att*tA.def*mu*hB*ff(tB.form)*rf(tA.elo),0.28),4.5);
+  const ctxA=getCtxMult(a,stage);const ctxB=getCtxMult(b,stage);let lA=Math.min(Math.max(tA.att*ctxA.att*tB.def*ctxB.def*mu*hA*ff(tA.form)*rf(tB.elo),0.28),4.5);
+  let lB=Math.min(Math.max(tB.att*ctxB.att*tA.def*ctxA.def*mu*hB*ff(tB.form)*rf(tA.elo),0.28),4.5);
   let pA=0,pD=0,pB=0;const sc=[];
   for(let i=0;i<=6;i++)for(let j=0;j<=6;j++){
     const p=poisson(lA,i)*poisson(lB,j)*dcRho(i,j,lA,lB);
@@ -655,7 +680,7 @@ function calcMatch(a,b,stage,venue){
     sc.push({a:i,b:j,p});
   }
   const tot=pA+pD+pB;
-  return{pA:pA/tot,pD:pD/tot,pB:pB/tot,lA,lB,scores:sc.sort((x,y)=>y.p-x.p)};
+  return{pA:pA/tot,pD:pD/tot,pB:pB/tot,lA,lB,scores:sc.sort((x,y)=>y.p-x.p),ctxA,ctxB};
 }
 function sampleKO(a,b,s){
   const r=calcMatch(a,b,s,'neutral');const rnd=Math.random();
@@ -776,6 +801,8 @@ function runPred(){
     <div class="fr"><span class="fl">Forma reciente</span><div class="fb"></div><span class="fv">${tA.form}/10 vs ${tB.form}/10</span></div>
     <div class="fr"><span class="fl">Att / Def actual</span><div class="fb"></div><span class="fv">${tA.att.toFixed(2)}/${tA.def.toFixed(2)} vs ${tB.att.toFixed(2)}/${tB.def.toFixed(2)}</span></div>
     ${tA.gp>0||tB.gp>0?`<div class="fr"><span class="fl" style="color:var(--green)">⚡ Datos reales</span><div class="fb"></div><span class="fv" style="color:var(--green);font-size:11px">${tA.gp}PJ / ${tB.gp}PJ</span></div>`:''}
+${r.ctxA&&r.ctxA.status&&r.ctxA.status!=='none'&&r.ctxA.status!=='base'&&r.ctxA.status!=='neutral'?`<div class="fr"><span class="fl" style="color:#9b7fff">⚡ Ctx ${tA.n}</span><div class="fb"></div><span class="fv" style="color:#9b7fff;font-size:11px">${r.ctxA.status} (×${r.ctxA.att.toFixed(2)})</span></div>`:''}
+${r.ctxB&&r.ctxB.status&&r.ctxB.status!=='none'&&r.ctxB.status!=='base'&&r.ctxB.status!=='neutral'?`<div class="fr"><span class="fl" style="color:#9b7fff">⚡ Ctx ${tB.n}</span><div class="fb"></div><span class="fv" style="color:#9b7fff;font-size:11px">${r.ctxB.status} (×${r.ctxB.att.toFixed(2)})</span></div>`:''}
   `;
   document.getElementById('pred-out').style.display='block';
 }
