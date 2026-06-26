@@ -441,7 +441,7 @@ select:hover{border-color:var(--border2)}
     <div class="ac"><div class="ac-v">63–68%</div><div class="ac-l">Rango modelos ML estándar</div></div>
     <div class="ac"><div class="ac-v">~0%</div><div class="ac-l">Modelos que acertaron al ganador</div></div>
   </div>
-  <div class="icard"><div class="ic-t">∑ Dixon-Coles + Elo</div><div class="ic-b">Los goles de cada equipo siguen Poisson(λ) independiente:</div><div class="code">P(X=k) = (λᵏ · e⁻λ) / k!<br>λ_A = att_A × def_B × μ_fase × localía × f(forma) × g(Elo_rival) × ctx<br>P(i,j) = Poisson(λA,i) × Poisson(λB,j) × ρ_DC(i,j)<br>ctx = contexto Mundial (posición, urgencia clasificatoria)</div></div>
+  <div class="icard"><div class="ic-t">∑ Dixon-Coles + Elo</div><div class="ic-b">Los goles de cada equipo siguen Poisson(λ) independiente:</div><div class="code">P(X=k) = (λᵏ · e⁻λ) / k!<br>λ_A = att_A × def_B × μ_fase × localía × f(forma) × g(Elo_rival) × ctx<br>P(i,j) = Poisson(λA,i) × Poisson(λB,j) × ρ_DC(i,j)<br>ctx = contexto (grupos: tabla/urgencia · KO: empates reforzados)</div></div>
   <div class="icard"><div class="ic-t">📊 Variables</div><div class="ic-b"><strong>Elo ratings (eloratings.net):</strong> ESP 2157 · ARG 2115 · FRA 2063 · ENG 2024 · BRA 1991<br><strong>att/def:</strong> ratio goles marcados/recibidos histórico vs media torneo<br><strong>Recalibración:</strong> con resultados reales, blend ponderado (hasta 50% en 6+ partidos)<br><strong>Bonus localía:</strong> +12% para USA, México y Canadá<br><strong>μ por fase:</strong> 1.34 grupos → 1.10 final</div></div>
   <div class="icard"><div class="ic-t">🔁 Monte Carlo</div><div class="ic-b">Simula grupos (72 partidos) → 32 clasificados → knockout. Penales: 50/50 ponderado por fuerza relativa. ±0.3% con 25k iteraciones.</div></div>
   <div class="icard"><div class="ic-t">⚠️ Limitaciones</div><div class="ic-b">Ningún modelo predijo a Argentina en Qatar 2022. Goldman Sachs favoreció a Brasil en 2014, 2018 y 2022. Los porcentajes son distribuciones de escenarios posibles, no certezas.</div></div>
@@ -642,7 +642,12 @@ function skipModal(){document.getElementById('modal').classList.add('hidden');}
 function poisson(l,k){let p=Math.exp(-l);for(let i=1;i<=k;i++)p*=l/i;return p}
 function dcRho(i,j,lA,lB){const rho=-0.13;if(i===0&&j===0)return 1-lA*lB*rho;if(i===0&&j===1)return 1+lA*rho;if(i===1&&j===0)return 1+lB*rho;if(i===1&&j===1)return 1-rho;return 1.0;}
 function getCtxMult(code,stage){
-  if(stage!=='group'||!LAST_MATCHES)return{att:1,def:1,status:'none',pos:0,pts:0};
+  // Modo eliminación directa: R32, R16, QF, SF, Final
+  if(stage&&stage!=='group'){
+    return{att:0.97,def:0.95,status:'KO',pos:0,pts:0};
+  }
+  // Modo grupos
+  if(!LAST_MATCHES)return{att:1,def:1,status:'none',pos:0,pts:0};
   const st=calcStandingsFromMatches(LAST_MATCHES);
   const g=T[code]?.g;
   if(!g||!st[g])return{att:1,def:1,status:'none',pos:0,pts:0};
@@ -654,12 +659,11 @@ function getCtxMult(code,stage){
   const minTop2Pts=top2[1]?top2[1].pts:0;
   const maxPossible=row.pts+rem*3;
   let att=1,def=1,status='neutral';
-  // Estado clasificatorio
   if(row.pts>=6||(row.pts>=4&&row.gd>=2)){status='clasificado';att*=0.92;}
   else if(rem===0&&maxPossible<minTop2Pts){status='eliminado';att*=0.85;def*=1.05;}
   else if(row.gp===2&&row.pts<=1&&maxPossible>=minTop2Pts){status='vida o muerte';att*=1.10;def*=1.08;}
+  else if(rem===0&&row.pts+1>=minTop2Pts){status='le sirve empate';att*=0.97;def*=1.03;}
   else if(rem===0&&row.pts>=minTop2Pts-1){status='define';att*=1.08;def*=1.05;}
-  // Bonus por posición
   if(pos===1)att*=1.05;
   else if(pos===2)att*=1.02;
   else if(pos===4&&status!=='eliminado')att*=0.97;
@@ -787,7 +791,9 @@ function runPred(){
   if(a===b){showToast('Seleccioná equipos distintos','err');return;}
   const r=calcMatch(a,b,document.getElementById('stage').value,document.getElementById('venue').value);
   const tA=T[a],tB=T[b];
-  document.getElementById('pred-hdr').innerHTML=`${tA.f} ${tA.n} &nbsp;vs&nbsp; ${tB.f} ${tB.n}`;
+  const stVal=document.getElementById('stage').value;
+  const stageBadge=stVal==='group'?'<span style="background:rgba(232,184,75,.15);color:#f5d06a;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:8px;font-weight:600;letter-spacing:.5px">FASE GRUPOS</span>':'<span style="background:rgba(240,84,92,.15);color:#f0545c;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:8px;font-weight:600;letter-spacing:.5px">ELIMINACIÓN ●</span>';
+  document.getElementById('pred-hdr').innerHTML=`${tA.f} ${tA.n} &nbsp;vs&nbsp; ${tB.f} ${tB.n}${stageBadge}`;
   document.getElementById('pA').textContent=Math.round(r.pA*100)+'%';
   document.getElementById('pD').textContent=Math.round(r.pD*100)+'%';
   document.getElementById('pB').textContent=Math.round(r.pB*100)+'%';
