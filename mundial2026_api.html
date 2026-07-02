@@ -674,9 +674,9 @@ function calcMatch(a,b,stage,venue){
   const mu=stage==='final'?1.10:stage==='sf'?1.15:stage==='qf'?1.20:stage==='r16'?1.24:stage==='r32'?1.27:1.34;
   const hA=venue==='homeA'?1.12:venue==='homeB'?0.91:1;
   const hB=venue==='homeB'?1.12:venue==='homeA'?0.91:1;
-  const ff=f=>0.86+f*0.028;const rf=elo=>1+(1800-elo)*0.00035;
-  const ctxA=getCtxMult(a,stage);const ctxB=getCtxMult(b,stage);let lA=Math.min(Math.max(tA.att*ctxA.att*tB.def*ctxB.def*mu*hA*ff(tA.form)*rf(tB.elo),0.28),4.5);
-  let lB=Math.min(Math.max(tB.att*ctxB.att*tA.def*ctxA.def*mu*hB*ff(tB.form)*rf(tA.elo),0.28),4.5);
+  const ff=f=>0.86+f*0.028;const rf=elo=>Math.min(1.08,Math.max(0.92,1+(1800-elo)*0.00035));const rfW=(m,gp)=>1+(m-1)*(gp>=2?0.8:1);
+  const ctxA=getCtxMult(a,stage);const ctxB=getCtxMult(b,stage);let lA=Math.min(Math.max(tA.att*ctxA.att*tB.def*ctxB.def*mu*hA*ff(tA.form)*rfW(rf(tB.elo),tA.gp+tB.gp),0.28),3.2);
+  let lB=Math.min(Math.max(tB.att*ctxB.att*tA.def*ctxA.def*mu*hB*ff(tB.form)*rfW(rf(tA.elo),tA.gp+tB.gp),0.28),3.2);
   let pA=0,pD=0,pB=0;const sc=[];
   for(let i=0;i<=6;i++)for(let j=0;j<=6;j++){
     const p=poisson(lA,i)*poisson(lB,j)*dcRho(i,j,lA,lB);
